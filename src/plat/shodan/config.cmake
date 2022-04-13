@@ -19,7 +19,7 @@ if(KernelPlatformShodan)
         TIMER_FREQUENCY 24000000
 
         INTERRUPT_CONTROLLER drivers/irq/smc_plic.h
-        PLIC_MAX_NUM_INT 14
+        PLIC_MAX_NUM_INT 15
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)
