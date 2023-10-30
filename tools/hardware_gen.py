@@ -48,8 +48,8 @@ def main(args: argparse.Namespace):
     selected output method. '''
     cfg = config.get_arch_config(args.arch, args.addrspace_max)
     parsed_dt = fdt.FdtParser(args.dtb)
-    rules = yaml.load(args.hardware_config, Loader=yaml.FullLoader)
-    schema = yaml.load(args.hardware_schema, Loader=yaml.FullLoader)
+    rules = yaml.load(args.hardware_config, Loader=yaml.SafeLoader)
+    schema = yaml.load(args.hardware_schema, Loader=yaml.SafeLoader)
     validate_rules(rules, schema)
     hardware = HardwareYaml(rules, cfg)
 
