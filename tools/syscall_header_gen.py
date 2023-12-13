@@ -9,15 +9,12 @@
 # ==============================
 
 from __future__ import print_function
+from importlib.metadata import version
 from jinja2 import Environment, BaseLoader
 import argparse
 import re
 import sys
 import xml.dom.minidom
-import pkg_resources
-# We require jinja2 to be at least version 2.10 as we use the 'namespace' feature from
-# that version
-pkg_resources.require("jinja2>=2.10")
 
 
 COMMON_HEADER = """
@@ -223,6 +220,12 @@ def generate_libsel4_file(libsel4_header, syscalls):
 
 
 if __name__ == "__main__":
+    # We require jinja2 to be at least version 2.10 as we used the 'namespace'
+    # feature from that version.
+    jinja2_version = version("jinja2")
+    if jinja2_version < "2.10":
+        sys.exit("Jinja2 should be >= 2.10")
+
     args = parse_args()
 
     (api, debug) = parse_xml(args.xml, args.mcs)
