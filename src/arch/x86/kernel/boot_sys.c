@@ -706,6 +706,7 @@ BOOT_CODE VISIBLE void boot_sys(
 {
     bool_t result = false;
 
+    // Loads cmd parsing here 
     if (multiboot_magic == MULTIBOOT_MAGIC) {
         result = try_boot_sys_mbi1(mbi);
     } else if (multiboot_magic == MULTIBOOT2_MAGIC) {
@@ -713,6 +714,8 @@ BOOT_CODE VISIBLE void boot_sys(
     } else {
         printf("Boot loader is not multiboot 1 or 2 compliant %lx\n", multiboot_magic);
     }
+    printf("SZYMS: BOOT START\n");
+    printf("SZYMS: CONFIG_KERNEL_SKIM_WINDOW: %d\n", CONFIG_KERNEL_SKIM_WINDOW);
 
     if (result) {
         result = try_boot_sys();

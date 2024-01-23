@@ -730,6 +730,7 @@ BOOT_CODE static bool_t create_untypeds_for_region(
        [0..end) is not necessarily part of the kernel window (depending on the value of PPTR_BASE).
        This is fine for device untypeds. For normal untypeds, the region is assumed to be fully in
        the kernel window. This is not checked here. */
+    int szym_counter = 0;
     while (!is_reg_empty(reg)) {
 
         /* Calculate the bit size of the region. This is also correct for end < start: it will
@@ -737,6 +738,9 @@ BOOT_CODE static bool_t create_untypeds_for_region(
            large for alignment, so the code further down will reduce the size. */
         unsigned int size_bits = seL4_WordBits - 1 - clzl(reg.end - reg.start);
         /* The size can't exceed the largest possible untyped size. */
+        printf("szymcounter: %d Bit size: %u, reg start: [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", szym_counter, size_bits, reg.start, reg.end);
+        printf("MAx untyped bits size: %u\n", seL4_MaxUntypedBits);
+        szym_counter +=1;
         if (size_bits > seL4_MaxUntypedBits) {
             size_bits = seL4_MaxUntypedBits;
         }
@@ -754,6 +758,7 @@ BOOT_CODE static bool_t create_untypeds_for_region(
          * be used anyway.
          */
         if (size_bits >= seL4_MinUntypedBits) {
+            printf("Actual size: %u\n", size_bits);
             if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits, first_untyped_slot)) {
                 return false;
             }
@@ -808,8 +813,10 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
                boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
         return false;
     }
+    printf("SZYMS: Creating untypeds reuse mem region: start [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
 
     /* convert remaining freemem into UT objects and provide the caps */
+    printf("SZYMS: size ndks-boot freemem: %"SEL4_PRIu_word"\n", ARRAY_SIZE(ndks_boot.freemem));
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
         region_t reg = ndks_boot.freemem[i];
         ndks_boot.freemem[i] = REG_EMPTY;
@@ -819,6 +826,9 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
                    (unsigned int)i, reg.start, reg.end);
             return false;
         }
+            printf("SZYMS: creation of untypeds for free memory region #%u at"
+                   " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] success\n",
+                   (unsigned int)i, reg.start, reg.end);
     }
 
     ndks_boot.bi_frame->untyped = (seL4_SlotRegion) {
