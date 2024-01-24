@@ -807,28 +807,33 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
      * can be reused.
      */
     region_t boot_mem_reuse_reg = paddr_to_pptr_reg(get_p_reg_kernel_img_boot());
+    printf("SZYMS: Creating untypeds reuse mem region: start [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
         printf("ERROR: creation of untypeds for recycled boot memory"
                " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
                boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
         return false;
     }
-    printf("SZYMS: Creating untypeds reuse mem region: start [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
+    printf("SZYMS: FINISHED: Creating untypeds reuse mem\n");
 
     /* convert remaining freemem into UT objects and provide the caps */
     printf("SZYMS: size ndks-boot freemem: %"SEL4_PRIu_word"\n", ARRAY_SIZE(ndks_boot.freemem));
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
         region_t reg = ndks_boot.freemem[i];
         ndks_boot.freemem[i] = REG_EMPTY;
+        printf("SZYMS: creation of untypeds for free memory region #%u at"
+               " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] success\n",
+               (unsigned int)i, reg.start, reg.end);
+
         if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
             printf("ERROR: creation of untypeds for free memory region #%u at"
                    " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
                    (unsigned int)i, reg.start, reg.end);
             return false;
         }
-            printf("SZYMS: creation of untypeds for free memory region #%u at"
-                   " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] success\n",
-                   (unsigned int)i, reg.start, reg.end);
+        printf("SZYMS: FINISHED: creation of untypeds for free memory region #%u at"
+               " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] success\n",
+               (unsigned int)i, reg.start, reg.end);
     }
 
     ndks_boot.bi_frame->untyped = (seL4_SlotRegion) {
