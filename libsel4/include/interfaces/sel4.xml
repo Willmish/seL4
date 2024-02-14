@@ -466,6 +466,8 @@
             <cap_param append_description="CPTR to the CNode at the root of the CSpace where the capability will be found. Must be at a depth equivalent to the wordsize."/>
             <param dir="in" name="index" type="seL4_Word" description="CPTR to the capability. Resolved from the root of the _service parameter."/>
             <param dir="in" name="depth" type="seL4_Uint8" description="Number of bits of index to resolve to find the capability being operated on."/>
+            <param dir="out" name="untypedSlabIndex" type="seL4_Word" description="Index of the Untyped in the top level CNode to which memory is returned."/>
+            <param dir="out" name="isLastReference" type="seL4_Bool" description="True if this operation deletes the last capability pointing to an object."/>
         </method>
 
         <method id="CNodeCancelBadgedSends" name="CancelBadgedSends" manual_name="Cancel Badged Sends" manual_label="cnode_cancelbadgedsends">

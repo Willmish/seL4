@@ -199,7 +199,8 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
 
     if (invLabel == CNodeDelete) {
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
-        return invokeCNodeDelete(destSlot);
+        // TODO: @Willmish - is passing cap additionally needed (like in invokeUntyped_Describe)? buffer needed to pass back message
+        return invokeCNodeDelete(destSlot, buffer);
     }
 
 #ifndef CONFIG_KERNEL_MCS
@@ -317,9 +318,21 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
     return cteRevoke(destSlot);
 }
 
-exception_t invokeCNodeDelete(cte_t *destSlot)
+exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
-    return cteDelete(destSlot, true);
+    exception_t status;
+    word_t untypedSlabIndex;
+    bool_t isLastReference;
+
+    status = cteDelete(destSlot, true);
+
+    // TODO: @Willmish - here extract the required book keeping values and assign
+    // to untypedSlabIndex and isLastReference
+    untypedSlabIndex = 42;
+    isLastReference = true;
+    setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
+    setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
+    return status;
 }
 
 exception_t invokeCNodeCancelBadgedSends(cap_t cap)

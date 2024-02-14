@@ -13,7 +13,7 @@
 exception_t decodeCNodeInvocation(word_t invLabel, word_t length,
                                   cap_t cap, word_t *buffer);
 exception_t invokeCNodeRevoke(cte_t *destSlot);
-exception_t invokeCNodeDelete(cte_t *destSlot);
+exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer);
 exception_t invokeCNodeCancelBadgedSends(cap_t cap);
 exception_t invokeCNodeInsert(cap_t cap, cte_t *srcSlot, cte_t *destSlot);
 exception_t invokeCNodeMove(cap_t cap, cte_t *srcSlot, cte_t *destSlot);
