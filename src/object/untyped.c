@@ -42,6 +42,8 @@ exception_t decodeUntypedInvocation(word_t invLabel, word_t length, cte_t *slot,
 
     /* Ensure operation is valid. */
     if (invLabel == UntypedDescribe) {
+        //printf("CAP 0: %u\n", cap.words[0]);
+        //printf("CAP 1: %u\n", cap.words[1]);
         return invokeUntyped_Describe(slot, cap, buffer);
     }
 
@@ -274,6 +276,7 @@ static exception_t resetUntypedCap(cte_t *srcSlot)
     return EXCEPTION_NONE;
 }
 
+int count_untyped_retype = 0;
 exception_t invokeUntyped_Retype(cte_t *srcSlot,
                                  bool_t reset, void *retypeBase,
                                  object_t newType, word_t userSize,
@@ -291,7 +294,12 @@ exception_t invokeUntyped_Retype(cte_t *srcSlot,
             return status;
         }
     }
-
+    // get descrption of the source cap
+    if (count_untyped_retype > 51320) {
+        printf("i %d, Dupa\n", count_untyped_retype);
+        printf("Retype: %s\n", cap_get_capDescription(srcSlot));
+    }
+    count_untyped_retype++;
     /* Update the amount of free space left in this untyped cap.
      *
      * Note that userSize is not necessarily the true size of the object in
@@ -314,6 +322,7 @@ exception_t invokeUntyped_Describe(cte_t *slot, cap_t cap, word_t *buffer)
     exception_t status;
     word_t untypedFreeBytes, sizeBits;
     word_t freeIndex;
+    // What is the cap?printf("%d ")
 
     status = ensureNoChildren(slot);
     if (status != EXCEPTION_NONE) {

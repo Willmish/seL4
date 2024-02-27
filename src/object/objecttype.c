@@ -634,7 +634,6 @@ exception_t decodeInvocation(word_t invLabel, word_t length,
         return Arch_decodeInvocation(invLabel, length, capIndex,
                                      slot, cap, call, buffer);
     }
-
     switch (cap_get_capType(cap)) {
     case cap_null_cap:
         userError("Attempted to invoke a null cap #%lu.", capIndex);

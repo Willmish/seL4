@@ -32,6 +32,7 @@ typedef struct finaliseSlot_ret finaliseSlot_ret_t;
 static finaliseSlot_ret_t finaliseSlot(cte_t *slot, bool_t exposed);
 static void emptySlot(cte_t *slot, cap_t cleanupInfo);
 static exception_t reduceZombie(cte_t *slot, bool_t exposed);
+static char* cap_get_capDescription(cte_t* cte);
 
 #ifdef CONFIG_KERNEL_MCS
 #define CNODE_LAST_INVOCATION CNodeRotate
@@ -317,12 +318,86 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
 {
     return cteRevoke(destSlot);
 }
-
+int count_delete_cnode = 0;
 exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
     exception_t status;
     word_t untypedSlabIndex;
     bool_t isLastReference;
+    word_t MEMORY_THREAD_CNODE_CPTR = 1;
+
+    //printf("DELETE: %s\n", cap_get_capDescription(destSlot));
+    // get the funny mdb thingy
+    // DO not spam prints during system init (roughly this many such syscalls)
+    if (count_delete_cnode > 49462)
+    {
+        if (isFinalCapability(destSlot)) {
+            printf("i %d, Dupa2\n", count_delete_cnode);
+            cte_t *prev_slot = destSlot;
+            while (mdb_node_get_mdbPrev(prev_slot->cteMDBNode)) {
+                printf("Back!\n");
+                prev_slot = CTE_PTR(mdb_node_get_mdbPrev(prev_slot->cteMDBNode));
+                if (cap_get_capType(prev_slot->cap) == cap_untyped_cap)
+                {
+                    printf("Found untyped! stop\n");
+                    break;
+                }
+            }
+
+            if (cap_get_capType(prev_slot->cap) == cap_untyped_cap) {
+                // We have found the source untyped cap, now lets get its index in the memory thread's TCB's uppermost CNode
+                lookupCapAndSlot_ret_t lu_ret_cnode = lookupCapAndSlot(NODE_STATE(ksCurThread), MEMORY_THREAD_CNODE_CPTR);
+                // XXX: add return val verification, Is it a cnode??
+                if (cap_get_capType(lu_ret_cnode.cap) == cap_cnode_cap) {
+                    cte_t *cnode = CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret_cnode.cap));
+                    word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret_cnode.cap);
+                    // Find index of our target untyped!
+                    word_t max_slot = (1<<radix) -1;
+                    for (word_t slot = 0; slot <= max_slot; ++slot) {
+                        cte_t *query = &cnode[slot];
+                        if (cap_get_capType(query->cap) == cap_null_cap) {
+                            continue;
+                        }
+                        // we know it should be 92! 0x5c
+                        if(slot == 0x5c) {
+                            printf("0x5c in cnode: %s\n", cap_get_capDescription(query));
+                            printf("cap: %u %u\n", query->cap.words[0], query->cap.words[1]);
+                            printf("cap prev_slot: %u %u\n", prev_slot->cap.words[0], prev_slot->cap.words[1]);
+                            printf("Same object as %lu\n", sameRegionAs(query->cap, prev_slot->cap));
+                            
+                        }
+                        printf("IS %lu? %s\n", slot, sameRegionAs(query->cap, prev_slot->cap) ? "True" : "False");
+                    }
+                }
+/*
+#define IN_CSPACE(SLOT) ((word_t)(SLOT) >= (word_t)cnode && (word_t)(SLOT) < (word_t)(&cnode[max_slot]))
+#define CSPACE_INDEX(SLOT) (((word_t)(SLOT) - (word_t)cnode) / sizeof(slot_t))
+    word_t max_slot = (1<<radix) - 1;
+    for (word_t slot = 0; slot <= max_slot; ++slot) {
+        cte_t *query = &cnode[slot];
+        if (cap_get_capType(query->cap) == cap_null_cap) {
+            continue;
+        }
+
+        printf("|- %03lx. %s -> ", slot, cap_get_capDescription(query));
+        for (query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode));
+            query && isMDBParentOf(&cnode[slot], query);
+            query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode))) {
+            if (!IN_CSPACE(query)) {
+                continue;
+            }
+            printf("%03lx. %s -> ", CSPACE_INDEX(query), cap_get_capDescription(query));
+        }
+        printf("null\n");
+    }
+*/
+            }
+            printf("Delete: %s\n", cap_get_capDescription(prev_slot));
+            if (mdb_node_get_mdbNext(prev_slot->cteMDBNode))
+                printf("Delete: %s\n", cap_get_capDescription(CTE_PTR(mdb_node_get_mdbNext(prev_slot->cteMDBNode))));
+        }
+    }
+    count_delete_cnode++;
 
     status = cteDelete(destSlot, true);
 
@@ -330,10 +405,31 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     // to untypedSlabIndex and isLastReference
     untypedSlabIndex = 42;
     isLastReference = true;
+    
     setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
     setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
     return status;
 }
+//exception_t invokeUntyped_Describe(cte_t *slot, cap_t cap, word_t *buffer)
+//{
+//    exception_t status;
+//    word_t untypedFreeBytes, sizeBits;
+//    word_t freeIndex;
+//
+//    status = ensureNoChildren(slot);
+//    if (status != EXCEPTION_NONE) {
+//        freeIndex = cap_untyped_cap_get_capFreeIndex(cap);
+//    } else {
+//        freeIndex = 0;
+//    }
+//    untypedFreeBytes = BIT(cap_untyped_cap_get_capBlockSize(cap)) -
+//                       FREE_INDEX_TO_OFFSET(freeIndex);
+//    sizeBits = cap_untyped_cap_get_capBlockSize(cap);
+//
+//    setMR(NODE_STATE(ksCurThread), buffer, 0, untypedFreeBytes);
+//    setMR(NODE_STATE(ksCurThread), buffer, 1, sizeBits);
+//    return EXCEPTION_NONE;
+//}
 
 exception_t invokeCNodeCancelBadgedSends(cap_t cap)
 {
@@ -1053,6 +1149,8 @@ static char* cap_get_capDescription(cte_t* cte)
 
 void debug_dumpCNode(cte_t* cnode, word_t radix)
 {
+    printf("AHOU!\n");
+    printf("cap: %u %u\n", cnode->cap.words[0], cnode->cap.words[1]);
 #define IN_CSPACE(SLOT) ((word_t)(SLOT) >= (word_t)cnode && (word_t)(SLOT) < (word_t)(&cnode[max_slot]))
 #define CSPACE_INDEX(SLOT) (((word_t)(SLOT) - (word_t)cnode) / sizeof(slot_t))
     word_t max_slot = (1<<radix) - 1;
@@ -1062,7 +1160,7 @@ void debug_dumpCNode(cte_t* cnode, word_t radix)
             continue;
         }
 
-        printf("|- %03lx. %s -> ", slot, cap_get_capDescription(query));
+        printf("|- %03lx. decim: %lu %s -> ", slot, slot, cap_get_capDescription(query));
         for (query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode));
             query && isMDBParentOf(&cnode[slot], query);
             query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode))) {
