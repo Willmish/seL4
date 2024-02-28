@@ -296,7 +296,7 @@ exception_t invokeUntyped_Retype(cte_t *srcSlot,
     }
     // get descrption of the source cap
     if (count_untyped_retype > 51320) {
-        printf("i %d, Dupa\n", count_untyped_retype);
+        printf("i %d, retype\n", count_untyped_retype);
         printf("Retype: %s\n", cap_get_capDescription(srcSlot));
     }
     count_untyped_retype++;

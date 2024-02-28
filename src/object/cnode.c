@@ -332,7 +332,7 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     if (count_delete_cnode > 49462)
     {
         if (isFinalCapability(destSlot)) {
-            printf("i %d, Dupa2\n", count_delete_cnode);
+            printf("i %d, delete\n", count_delete_cnode);
             cte_t *prev_slot = destSlot;
             while (mdb_node_get_mdbPrev(prev_slot->cteMDBNode)) {
                 printf("Back!\n");
@@ -363,10 +363,14 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
                             printf("0x5c in cnode: %s\n", cap_get_capDescription(query));
                             printf("cap: %u %u\n", query->cap.words[0], query->cap.words[1]);
                             printf("cap prev_slot: %u %u\n", prev_slot->cap.words[0], prev_slot->cap.words[1]);
-                            printf("Same object as %lu\n", sameRegionAs(query->cap, prev_slot->cap));
+                            printf("Same object as %d\n", (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]));
                             
                         }
-                        printf("IS %lu? %s\n", slot, sameRegionAs(query->cap, prev_slot->cap) ? "True" : "False");
+                        // XXX: below returns true for overlapping untypeds!
+                        // printf("is %lu? %s\n", slot, sameregionas(query->cap, prev_slot->cap) ? "true" : "false");
+                        // XXX: for now, compare raw capabilities (they SHOULD be unique)
+                        printf("is %lu? %s\n", slot, (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]) ? "true" : "false");
+
                     }
                 }
 /*
