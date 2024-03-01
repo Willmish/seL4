@@ -325,13 +325,15 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     word_t untypedSlabIndex = 0; // 0 is invalid, as it is 0th offset from CNode (so the CNode itself). 
     // TODO: @Willmish will need to add checking for this in MemoryManager on user side!
     bool_t isLastReference = false;
-    // Index (CPTR) of thread containing all untyped slabs
+    // Index (CPTR) of thread containing all untyped slabs.
+    // NOTE: this is valid, since all invocations of Deletion are always made via the MemoryManager thread, hence ksCurThread
+    // will always be the MemoryManager thread. Alternative is to, apart from specifying CNode index, specify the MemoryManager thread
     word_t MEMORY_THREAD_CNODE_CPTR = 1;
 
-    // DO not spam prints during system init (roughly this many such syscalls)
+    // DO not spam prints during system init (roughly this many such syscalls) TODO: Remove when logging messages deleted
     if (count_delete_cnode > 49462)
     {
-    // TODO: @Willmish - here extract the required book keeping values and assign
+    // Here extract the required book keeping values and assign
     // to untypedSlabIndex and isLastReference
         if ((isLastReference = isFinalCapability(destSlot))) {
             //printf("i %d, delete\n", count_delete_cnode);
@@ -349,7 +351,8 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
             // Found the source untyped cap, now lets get its index in the memory thread's TCB's uppermost CNode
             if (cap_get_capType(prev_slot->cap) == cap_untyped_cap) {
                 lookupCapAndSlot_ret_t lu_ret_cnode = lookupCapAndSlot(NODE_STATE(ksCurThread), MEMORY_THREAD_CNODE_CPTR);
-                // XXX: add return val verification, Is it a cnode??
+                // XXX: add return val verification, Is it a cnode?? Is this redundant if untyped capability is indeed found in the derivation tree (MDB traversal?)
+                // I think that in that case the calling thread should always be MemoryManager so this should always be a cnode
                 if (cap_get_capType(lu_ret_cnode.cap) == cap_cnode_cap) {
                     cte_t *cnode = CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret_cnode.cap));
                     word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret_cnode.cap);
@@ -360,14 +363,14 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
                         if (cap_get_capType(query->cap) == cap_null_cap) {
                             continue;
                         }
-                        // we know it should be 92! 0x5c
-                        if(slot == 0x5c) {
-                            printf("0x5c in cnode: %s\n", cap_get_capDescription(query));
-                            printf("cap: %u %u\n", query->cap.words[0], query->cap.words[1]);
-                            printf("cap prev_slot: %u %u\n", prev_slot->cap.words[0], prev_slot->cap.words[1]);
-                            printf("Same object as %d\n", (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]));
-                            
-                        }
+                        // TODO: Remove, used for debugging. we know it should be 92! 0x5c
+                        //if(slot == 0x5c) {
+                        //    printf("0x5c in cnode: %s\n", cap_get_capDescription(query));
+                        //    printf("cap: %u %u\n", query->cap.words[0], query->cap.words[1]);
+                        //    printf("cap prev_slot: %u %u\n", prev_slot->cap.words[0], prev_slot->cap.words[1]);
+                        //    printf("Same object as %d\n", (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]));
+                        //}
+
                         // XXX: below returns true for overlapping untypeds!
                         // printf("is %lu? %s\n", slot, sameregionas(query->cap, prev_slot->cap) ? "true" : "false");
                         // XXX: for now, compare raw capabilities (they SHOULD be unique)
@@ -393,26 +396,6 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
     return status;
 }
-//exception_t invokeUntyped_Describe(cte_t *slot, cap_t cap, word_t *buffer)
-//{
-//    exception_t status;
-//    word_t untypedFreeBytes, sizeBits;
-//    word_t freeIndex;
-//
-//    status = ensureNoChildren(slot);
-//    if (status != EXCEPTION_NONE) {
-//        freeIndex = cap_untyped_cap_get_capFreeIndex(cap);
-//    } else {
-//        freeIndex = 0;
-//    }
-//    untypedFreeBytes = BIT(cap_untyped_cap_get_capBlockSize(cap)) -
-//                       FREE_INDEX_TO_OFFSET(freeIndex);
-//    sizeBits = cap_untyped_cap_get_capBlockSize(cap);
-//
-//    setMR(NODE_STATE(ksCurThread), buffer, 0, untypedFreeBytes);
-//    setMR(NODE_STATE(ksCurThread), buffer, 1, sizeBits);
-//    return EXCEPTION_NONE;
-//}
 
 exception_t invokeCNodeCancelBadgedSends(cap_t cap)
 {
