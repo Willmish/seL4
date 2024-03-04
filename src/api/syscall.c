@@ -88,8 +88,8 @@ exception_t handleUnknownSyscall(word_t w)
             return EXCEPTION_SYSCALL_ERROR;
         }
         word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret.cap);
-        printf("DUMP CNODE! cptr: %lu\n", cptr);
-        printf("DUMP CNODE! cap: %u %u\n", lu_ret.cap.words[0], lu_ret.cap.words[1]);
+        //printf("DUMP CNODE! cptr: %lu\n", cptr);
+        //printf("DUMP CNODE! cap: %u %u\n", lu_ret.cap.words[0], lu_ret.cap.words[1]);
         debug_dumpCNode(CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret.cap)), radix);
         return EXCEPTION_NONE;
     }

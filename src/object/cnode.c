@@ -32,7 +32,7 @@ typedef struct finaliseSlot_ret finaliseSlot_ret_t;
 static finaliseSlot_ret_t finaliseSlot(cte_t *slot, bool_t exposed);
 static void emptySlot(cte_t *slot, cap_t cleanupInfo);
 static exception_t reduceZombie(cte_t *slot, bool_t exposed);
-static char* cap_get_capDescription(cte_t* cte);
+//static char* cap_get_capDescription(cte_t* cte);
 
 #ifdef CONFIG_KERNEL_MCS
 #define CNODE_LAST_INVOCATION CNodeRotate
@@ -318,7 +318,7 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
 {
     return cteRevoke(destSlot);
 }
-int count_delete_cnode = 0;
+//int count_delete_cnode = 0;
 exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
     exception_t status;
@@ -331,8 +331,8 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     word_t MEMORY_THREAD_CNODE_CPTR = 1;
 
     // DO not spam prints during system init (roughly this many such syscalls) TODO: Remove when logging messages deleted
-    if (count_delete_cnode > 49462)
-    {
+    //if (count_delete_cnode > 49462)
+    //{
     // Here extract the required book keeping values and assign
     // to untypedSlabIndex and isLastReference
         if ((isLastReference = isFinalCapability(destSlot))) {
@@ -377,6 +377,7 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
                         //printf("is %lu? %s\n", slot, (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]) ? "true" : "false");
                         if (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]) {
                             untypedSlabIndex = slot;
+                            break;
                         }
 
                     }
@@ -386,8 +387,8 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
             //if (mdb_node_get_mdbNext(prev_slot->cteMDBNode))
             //    printf("Delete: %s\n", cap_get_capDescription(CTE_PTR(mdb_node_get_mdbNext(prev_slot->cteMDBNode))));
         }
-    }
-    count_delete_cnode++;
+    //}
+    //count_delete_cnode++;
 
     status = cteDelete(destSlot, true);
 
@@ -1115,8 +1116,8 @@ static char* cap_get_capDescription(cte_t* cte)
 
 void debug_dumpCNode(cte_t* cnode, word_t radix)
 {
-    printf("AHOU!\n");
-    printf("cap: %u %u\n", cnode->cap.words[0], cnode->cap.words[1]);
+    //printf("AHOU!\n");
+    //printf("cap: %u %u\n", cnode->cap.words[0], cnode->cap.words[1]);
 #define IN_CSPACE(SLOT) ((word_t)(SLOT) >= (word_t)cnode && (word_t)(SLOT) < (word_t)(&cnode[max_slot]))
 #define CSPACE_INDEX(SLOT) (((word_t)(SLOT) - (word_t)cnode) / sizeof(slot_t))
     word_t max_slot = (1<<radix) - 1;
@@ -1126,7 +1127,7 @@ void debug_dumpCNode(cte_t* cnode, word_t radix)
             continue;
         }
 
-        printf("|- %03lx. decim: %lu %s -> ", slot, slot, cap_get_capDescription(query));
+        //printf("|- %03lx. decim: %lu %s -> ", slot, slot, cap_get_capDescription(query));
         for (query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode));
             query && isMDBParentOf(&cnode[slot], query);
             query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode))) {

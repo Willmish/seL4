@@ -276,7 +276,7 @@ static exception_t resetUntypedCap(cte_t *srcSlot)
     return EXCEPTION_NONE;
 }
 
-int count_untyped_retype = 0;
+//int count_untyped_retype = 0;
 exception_t invokeUntyped_Retype(cte_t *srcSlot,
                                  bool_t reset, void *retypeBase,
                                  object_t newType, word_t userSize,
@@ -295,11 +295,11 @@ exception_t invokeUntyped_Retype(cte_t *srcSlot,
         }
     }
     // get descrption of the source cap
-    if (count_untyped_retype > 51320) {
-        printf("i %d, retype\n", count_untyped_retype);
-        printf("Retype: %s\n", cap_get_capDescription(srcSlot));
-    }
-    count_untyped_retype++;
+    //if (count_untyped_retype > 51320) {
+    //    printf("i %d, retype\n", count_untyped_retype);
+    //    printf("Retype: %s\n", cap_get_capDescription(srcSlot));
+    //}
+    //count_untyped_retype++;
     /* Update the amount of free space left in this untyped cap.
      *
      * Note that userSize is not necessarily the true size of the object in
