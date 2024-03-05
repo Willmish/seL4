@@ -64,6 +64,10 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
     index = getSyscallArg(0, buffer);
     w_bits = getSyscallArg(1, buffer);
 
+    if(index == 42424242 || w_bits == 21372137) {
+        printf("MR interfere! Index %lu , w_bits %lu\n", index, w_bits);
+    }
+    assert(index != 42424242 && w_bits != 21372137);
     lu_ret = lookupTargetSlot(cap, index, w_bits);
     if (lu_ret.status != EXCEPTION_NONE) {
         userError("CNode operation: Target slot invalid.");
@@ -199,7 +203,7 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
 
     if (invLabel == CNodeDelete) {
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
-        return invokeCNodeDelete(destSlot);
+        return invokeCNodeDelete(destSlot, buffer);
     }
 
 #ifndef CONFIG_KERNEL_MCS
@@ -317,8 +321,12 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
     return cteRevoke(destSlot);
 }
 
-exception_t invokeCNodeDelete(cte_t *destSlot)
+exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
+    //printf("%p\n", destSlot);
+    setMR(NODE_STATE(ksCurThread), buffer, 0, 42424242);
+    setMR(NODE_STATE(ksCurThread), buffer, 1, 21372137);
+    //printf("%p\n", destSlot);
     return cteDelete(destSlot, true);
 }
 
