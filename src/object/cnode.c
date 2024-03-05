@@ -320,11 +320,8 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
 
 exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
-    exception_t status;
     word_t untypedSlabIndex;
     bool_t isLastReference;
-
-    status = cteDelete(destSlot, true);
 
     // TODO: @Willmish - here extract the required book keeping values and assign
     // to untypedSlabIndex and isLastReference
@@ -332,7 +329,7 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     isLastReference = true;
     setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
     setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
-    return status;
+    return cteDelete(destSlot, true);
 }
 
 exception_t invokeCNodeCancelBadgedSends(cap_t cap)
