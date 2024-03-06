@@ -22,6 +22,9 @@
 #include <model/statedata.h>
 #include <util.h>
 
+// TCB NAME LENGTH
+#include <object/tcb.h>
+
 struct finaliseSlot_ret {
     exception_t status;
     bool_t success;
@@ -64,6 +67,10 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
     index = getSyscallArg(0, buffer);
     w_bits = getSyscallArg(1, buffer);
 
+    printf("decodeCNodeInvocation Thread name: %.*s, thread ptr: %p\n", (int)TCB_NAME_LENGTH, TCB_PTR_DEBUG_PTR(TCB_PTR(NODE_STATE(ksCurThread)))->tcbName, ksCurThread);
+    if (index == 42424242 || w_bits == 21372137) {
+        printf("!!!! MR interfere! index %lu w_bits %lu\n", index, w_bits);
+    }
     lu_ret = lookupTargetSlot(cap, index, w_bits);
     if (lu_ret.status != EXCEPTION_NONE) {
         userError("CNode operation: Target slot invalid.");
@@ -320,15 +327,12 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
 
 exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
-    word_t untypedSlabIndex;
-    bool_t isLastReference;
-
     // TODO: @Willmish - here extract the required book keeping values and assign
     // to untypedSlabIndex and isLastReference
-    untypedSlabIndex = 42;
-    isLastReference = true;
-    setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
-    setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
+    
+    setMR(NODE_STATE(ksCurThread), buffer, 0, 42424242);
+    setMR(NODE_STATE(ksCurThread), buffer, 1, 21372137);
+    printf("invokeCNodeDelete Thread name: %.*s, thread ptr: %p\n", (int)TCB_NAME_LENGTH, TCB_PTR_DEBUG_PTR(TCB_PTR(NODE_STATE(ksCurThread)))->tcbName, ksCurThread);
     return cteDelete(destSlot, true);
 }
 
