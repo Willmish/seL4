@@ -390,9 +390,14 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
     //}
     //count_delete_cnode++;
 
+    // TODO: Possibly cteDelete before the traversal above, or at least check if this will be preempted/finaliseCapabiltiy return value is different 
+    // than EXCEPTION_NONE
     status = cteDelete(destSlot, true);
 
-    
+    // Only change MRs if status is EXCEPTION_NONE (otherwise can mess things up with preemption, to lok into more)
+    if (status != EXCEPTION_NONE) {
+            return status;
+    } 
     setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
     setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
     return status;
