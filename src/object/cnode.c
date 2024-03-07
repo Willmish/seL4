@@ -24,6 +24,7 @@
 
 // TCB NAME LENGTH
 #include <object/tcb.h>
+#include <api/debug.h>
 
 struct finaliseSlot_ret {
     exception_t status;
@@ -42,6 +43,7 @@ static exception_t reduceZombie(cte_t *slot, bool_t exposed);
 #define CNODE_LAST_INVOCATION CNodeSaveCaller
 #endif
 
+//word_t counter = 0;
 exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
                                   word_t *buffer)
 {
@@ -64,10 +66,14 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
         current_syscall_error.type = seL4_TruncatedMessage;
         return EXCEPTION_SYSCALL_ERROR;
     }
+    printf("2: before reading values mr0 %lu mr1 %lu\n",  getSyscallArg(0, buffer), getSyscallArg(1, buffer));
     index = getSyscallArg(0, buffer);
     w_bits = getSyscallArg(1, buffer);
+    printf("3: after reading values mr0 %lu mr1 %lu\n", index, w_bits);
 
-    printf("decodeCNodeInvocation Thread name: %.*s, thread ptr: %p\n", (int)TCB_NAME_LENGTH, TCB_PTR_DEBUG_PTR(TCB_PTR(NODE_STATE(ksCurThread)))->tcbName, ksCurThread);
+    //printf("%lu, decodeCNodeInvocation Thread name: %.*s, thread ptr: %p\n", counter, (int)TCB_NAME_LENGTH, TCB_PTR_DEBUG_PTR(TCB_PTR(NODE_STATE(ksCurThread)))->tcbName, ksCurThread);
+    //debug_printKernelEntryReason();
+    //counter++;
     if (index == 42424242 || w_bits == 21372137) {
         printf("!!!! MR interfere! index %lu w_bits %lu\n", index, w_bits);
     }
@@ -329,11 +335,18 @@ exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
     // TODO: @Willmish - here extract the required book keeping values and assign
     // to untypedSlabIndex and isLastReference
+    exception_t status = cteDelete(destSlot, true);
+    // Only change MRs if status is EXCEPTION_NONE (otherwise can mess things up with preemption, to lok into more)
+    if (status != EXCEPTION_NONE) {
+            return status;
+    }
     
     setMR(NODE_STATE(ksCurThread), buffer, 0, 42424242);
     setMR(NODE_STATE(ksCurThread), buffer, 1, 21372137);
-    printf("invokeCNodeDelete Thread name: %.*s, thread ptr: %p\n", (int)TCB_NAME_LENGTH, TCB_PTR_DEBUG_PTR(TCB_PTR(NODE_STATE(ksCurThread)))->tcbName, ksCurThread);
-    return cteDelete(destSlot, true);
+    //debug_printKernelEntryReason();
+    //printf("invokeCNodeDelete Thread name: %.*s, thread ptr: %p\n", (int)TCB_NAME_LENGTH, TCB_PTR_DEBUG_PTR(TCB_PTR(NODE_STATE(ksCurThread)))->tcbName, ksCurThread);
+    printf("4: after setting, mr0 %lu mr1 %lu\n", getSyscallArg(0, buffer), getSyscallArg(1, buffer));
+    return status;//cteDelete(destSlot, true);
 }
 
 exception_t invokeCNodeCancelBadgedSends(cap_t cap)

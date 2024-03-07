@@ -432,26 +432,34 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
                               cptr, lu_ret.slot, lu_ret.cap,
                               isBlocking, isCall, buffer);
 #endif
-
+    printf("5. Post decode Invocation!\n");
     if (unlikely(status == EXCEPTION_PREEMPTED)) {
+        printf("5a. Return EXCEPTION_PREEMPTED!\n");
         return status;
     }
 
     if (unlikely(status == EXCEPTION_SYSCALL_ERROR)) {
+        printf("5b. Return EXCEPTION_SYSCALL_ERROR!\n");
         if (isCall) {
+            printf("5c. ReplyFromKErnel_error!\n");
             replyFromKernel_error(thread);
         }
+        printf("5d. Return EXCEPTION NONE!\n");
         return EXCEPTION_NONE;
     }
-
+    printf("6. No Syscall error!\n");
     if (unlikely(
             thread_state_get_tsType(thread->tcbState) == ThreadState_Restart)) {
+        printf("6a. ThreadState_Restart!\n");
         if (isCall) {
+            printf("6b. isCall reply FromKernel_success_empty!\n");
             replyFromKernel_success_empty(thread);
         }
+        printf("6c. Set threadRunning!\n");
         setThreadState(thread, ThreadState_Running);
     }
 
+    printf("7. Return EXCEPTION NONE!\n");
     return EXCEPTION_NONE;
 }
 

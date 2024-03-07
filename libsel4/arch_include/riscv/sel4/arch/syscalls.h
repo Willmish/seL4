@@ -347,6 +347,43 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBRecv(seL4_CPtr src, seL4_Word *sen
 
 }
 
+#ifdef CONFIG_PRINTING
+LIBSEL4_INLINE_FUNC void seL4_DebugPutChar(char c)
+{
+    seL4_Word unused0 = 0;
+    seL4_Word unused1 = 0;
+    seL4_Word unused2 = 0;
+    seL4_Word unused3 = 0;
+    seL4_Word unused4 = 0;
+    seL4_Word unused5 = 0;
+
+    riscv_sys_send_recv(seL4_SysDebugPutChar, c, &unused0, 0, &unused1, &unused2, &unused3,
+                        &unused4, &unused5, 0);
+}
+
+LIBSEL4_INLINE_FUNC void seL4_DebugPutString(char *str)
+{
+    for (char *s = str; *s; s++) {
+        seL4_DebugPutChar(*s);
+    }
+    return;
+}
+
+LIBSEL4_INLINE_FUNC void seL4_DebugDumpScheduler(void)
+{
+    seL4_Word unused0 = 0;
+    seL4_Word unused1 = 0;
+    seL4_Word unused2 = 0;
+    seL4_Word unused3 = 0;
+    seL4_Word unused4 = 0;
+    seL4_Word unused5 = 0;
+
+    riscv_sys_send_recv(seL4_SysDebugDumpScheduler, 0, &unused0, 0, &unused1, &unused2, &unused3,
+                        &unused4, &unused5, 0);
+}
+#endif
+
+
 LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_Call(seL4_CPtr dest, seL4_MessageInfo_t msgInfo)
 {
     seL4_MessageInfo_t info;
@@ -355,6 +392,7 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_Call(seL4_CPtr dest, seL4_MessageInf
     seL4_Word msg2 = seL4_GetMR(2);
     seL4_Word msg3 = seL4_GetMR(3);
 
+    seL4_DebugPutString("1.5: seL4_Call before invoking (NO MRs!!!)\n");
     riscv_sys_send_recv(seL4_SysCall, dest, &dest, msgInfo.words[0], &info.words[0], &msg0, &msg1,
                         &msg2, &msg3, 0);
 
@@ -404,7 +442,8 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_CallWithMRs(seL4_CPtr dest, seL4_Mes
     if (mr3 != seL4_Null && seL4_MessageInfo_get_length(msgInfo) > 3) {
         msg3 = *mr3;
     }
-
+    seL4_DebugPutString("0: seL4_CallWithMRs before invoking\n");
+    //printf("1: seL4_CallWithMRs before invoking mr0 %lu mr1 %lu mr2 %lu mr3 %lu\n", msg0, msg1, msg2, msg3);
     riscv_sys_send_recv(seL4_SysCall, dest, &dest, msgInfo.words[0], &info.words[0], &msg0, &msg1,
                         &msg2, &msg3, 0);
 
@@ -772,41 +811,7 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBWait(seL4_CPtr src, seL4_Word *sen
 }
 #endif
 
-#ifdef CONFIG_PRINTING
-LIBSEL4_INLINE_FUNC void seL4_DebugPutChar(char c)
-{
-    seL4_Word unused0 = 0;
-    seL4_Word unused1 = 0;
-    seL4_Word unused2 = 0;
-    seL4_Word unused3 = 0;
-    seL4_Word unused4 = 0;
-    seL4_Word unused5 = 0;
 
-    riscv_sys_send_recv(seL4_SysDebugPutChar, c, &unused0, 0, &unused1, &unused2, &unused3,
-                        &unused4, &unused5, 0);
-}
-
-LIBSEL4_INLINE_FUNC void seL4_DebugPutString(char *str)
-{
-    for (char *s = str; *s; s++) {
-        seL4_DebugPutChar(*s);
-    }
-    return;
-}
-
-LIBSEL4_INLINE_FUNC void seL4_DebugDumpScheduler(void)
-{
-    seL4_Word unused0 = 0;
-    seL4_Word unused1 = 0;
-    seL4_Word unused2 = 0;
-    seL4_Word unused3 = 0;
-    seL4_Word unused4 = 0;
-    seL4_Word unused5 = 0;
-
-    riscv_sys_send_recv(seL4_SysDebugDumpScheduler, 0, &unused0, 0, &unused1, &unused2, &unused3,
-                        &unused4, &unused5, 0);
-}
-#endif
 
 #ifdef CONFIG_DEBUG_BUILD
 LIBSEL4_INLINE_FUNC void seL4_DebugHalt(void)
