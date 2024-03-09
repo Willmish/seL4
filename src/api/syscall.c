@@ -88,8 +88,6 @@ exception_t handleUnknownSyscall(word_t w)
             return EXCEPTION_SYSCALL_ERROR;
         }
         word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret.cap);
-        //printf("DUMP CNODE! cptr: %lu\n", cptr);
-        //printf("DUMP CNODE! cap: %u %u\n", lu_ret.cap.words[0], lu_ret.cap.words[1]);
         debug_dumpCNode(CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret.cap)), radix);
         return EXCEPTION_NONE;
     }
@@ -424,27 +422,6 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
     if (unlikely(length > n_msgRegisters && !buffer)) {
         length = n_msgRegisters;
     }
-    //if (cap_get_capType(lu_ret.cap) == cap_untyped_cap) {
-    //    if(seL4_MessageInfo_get_label(info) == 2) { //UntypedDescribe
-    //    // CPTR IS WHAT WE WANT!@! TODO: WILLMISH
-    //        printf("SYSCALL: CAP_0: %lu\n", cptr);
-    //        //printf("SYSCALL: CAP_1: %u\n", cptr.words[1]);
-    //    }
-    //}
-    //if (cap_get_capType(lu_ret.cap) == cap_untyped_cap) {
-    //    if(seL4_MessageInfo_get_label(info) == 1) { //UntypedRetype
-    //    // CPTR IS WHAT WE WANT!@! TODO: WILLMISH
-    //        printf("SYSCALL UNTYPED_RETYPE: CAP_0: %lu\n", cptr);
-    //        //printf("SYSCALL: CAP_1: %u\n", cptr.words[1]);
-    //    }
-    //}
-    //if (cap_get_capType(lu_ret.cap) == cap_cnode_cap) {
-    //    if(seL4_MessageInfo_get_label(info) == 19) { //CnodeDelete
-    //    // CPTR IS WHAT WE WANT!@! TODO: WILLMISH
-    //        printf("SYSCALL CNODE_DELETE: CAP_0: %lu\n", cptr);
-    //        //printf("SYSCALL: CAP_1: %u\n", cptr.words[1]);
-    //    }
-    //}
 #ifdef CONFIG_KERNEL_MCS
     status = decodeInvocation(seL4_MessageInfo_get_label(info), length,
                               cptr, lu_ret.slot, lu_ret.cap,

@@ -32,7 +32,6 @@ typedef struct finaliseSlot_ret finaliseSlot_ret_t;
 static finaliseSlot_ret_t finaliseSlot(cte_t *slot, bool_t exposed);
 static void emptySlot(cte_t *slot, cap_t cleanupInfo);
 static exception_t reduceZombie(cte_t *slot, bool_t exposed);
-//static char* cap_get_capDescription(cte_t* cte);
 
 #ifdef CONFIG_KERNEL_MCS
 #define CNODE_LAST_INVOCATION CNodeRotate
@@ -200,7 +199,6 @@ exception_t decodeCNodeInvocation(word_t invLabel, word_t length, cap_t cap,
 
     if (invLabel == CNodeDelete) {
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
-        // TODO: @Willmish - is passing cap additionally needed (like in invokeUntyped_Describe)? buffer needed to pass back message
         return invokeCNodeDelete(destSlot, buffer);
     }
 
@@ -318,88 +316,68 @@ exception_t invokeCNodeRevoke(cte_t *destSlot)
 {
     return cteRevoke(destSlot);
 }
-//int count_delete_cnode = 0;
+
 exception_t invokeCNodeDelete(cte_t *destSlot, word_t *buffer)
 {
     exception_t status;
-    word_t untypedSlabIndex = 0; // 0 is invalid, as it is 0th offset from CNode (so the CNode itself). 
+    // untypedSlabIndex = 0 represents an invalid index, 0th CSlot never mapped by convention.
     // TODO: @Willmish will need to add checking for this in MemoryManager on user side!
+    word_t untypedSlabIndex = 0;
     bool_t isLastReference = false;
     // Index (CPTR) of thread containing all untyped slabs.
     // NOTE: this is valid, since all invocations of Deletion are always made via the MemoryManager thread, hence ksCurThread
-    // will always be the MemoryManager thread. Alternative is to, apart from specifying CNode index, specify the MemoryManager thread
+    // will always be the thread holding all large Untypeds. Alternative is to, apart from specifying CNode index, specify the MemoryManager thread
     word_t MEMORY_THREAD_CNODE_CPTR = 1;
 
-    // DO not spam prints during system init (roughly this many such syscalls) TODO: Remove when logging messages deleted
-    //if (count_delete_cnode > 49462)
-    //{
-    // Here extract the required book keeping values and assign
-    // to untypedSlabIndex and isLastReference
-        if ((isLastReference = isFinalCapability(destSlot))) {
-            //printf("i %d, delete\n", count_delete_cnode);
-            cte_t *prev_slot = destSlot;
-            // Navigate through Mapping Database for capabilities (doubly linked list) until an untyped cap is found
-            while (mdb_node_get_mdbPrev(prev_slot->cteMDBNode)) {
-                prev_slot = CTE_PTR(mdb_node_get_mdbPrev(prev_slot->cteMDBNode));
-                if (cap_get_capType(prev_slot->cap) == cap_untyped_cap)
-                {
-                    // printf("Found untyped! stop\n");
-                    break;
-                }
+    // Extract the required book keeping values and assign to untypedSlabIndex and isLastReference
+    if ((isLastReference = isFinalCapability(destSlot))) {
+        cte_t *parent_slot = destSlot;
+        // Navigate through Mapping Database for capabilities (doubly linked list) until an untyped cap is found
+        while (mdb_node_get_mdbPrev(parent_slot->cteMDBNode)) {
+            parent_slot = CTE_PTR(mdb_node_get_mdbPrev(parent_slot->cteMDBNode));
+            if (cap_get_capType(parent_slot->cap) == cap_untyped_cap) {
+                // Stop at first untyped cap: this is where the memory is returned to
+                break;
             }
-
-            // Found the source untyped cap, now lets get its index in the memory thread's TCB's uppermost CNode
-            if (cap_get_capType(prev_slot->cap) == cap_untyped_cap) {
-                lookupCapAndSlot_ret_t lu_ret_cnode = lookupCapAndSlot(NODE_STATE(ksCurThread), MEMORY_THREAD_CNODE_CPTR);
-                // XXX: add return val verification, Is it a cnode?? Is this redundant if untyped capability is indeed found in the derivation tree (MDB traversal?)
-                // I think that in that case the calling thread should always be MemoryManager so this should always be a cnode
-                if (cap_get_capType(lu_ret_cnode.cap) == cap_cnode_cap) {
-                    cte_t *cnode = CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret_cnode.cap));
-                    word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret_cnode.cap);
-                    // Find index of our target untyped in the CNode
-                    word_t max_slot = (1<<radix) -1;
-                    for (word_t slot = 0; slot <= max_slot; ++slot) {
-                        cte_t *query = &cnode[slot];
-                        if (cap_get_capType(query->cap) == cap_null_cap) {
-                            continue;
-                        }
-                        // TODO: Remove, used for debugging. we know it should be 92! 0x5c
-                        //if(slot == 0x5c) {
-                        //    printf("0x5c in cnode: %s\n", cap_get_capDescription(query));
-                        //    printf("cap: %u %u\n", query->cap.words[0], query->cap.words[1]);
-                        //    printf("cap prev_slot: %u %u\n", prev_slot->cap.words[0], prev_slot->cap.words[1]);
-                        //    printf("Same object as %d\n", (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]));
-                        //}
-
-                        // XXX: below returns true for overlapping untypeds!
-                        // printf("is %lu? %s\n", slot, sameregionas(query->cap, prev_slot->cap) ? "true" : "false");
-                        // XXX: for now, compare raw capabilities (they SHOULD be unique)
-                        //printf("is %lu? %s\n", slot, (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]) ? "true" : "false");
-                        if (query->cap.words[0] == prev_slot->cap.words[0] && query->cap.words[1] == prev_slot->cap.words[1]) {
-                            untypedSlabIndex = slot;
-                            break;
-                        }
-
-                    }
-                }
-            }
-            //printf("Delete: %s\n", cap_get_capDescription(prev_slot));
-            //if (mdb_node_get_mdbNext(prev_slot->cteMDBNode))
-            //    printf("Delete: %s\n", cap_get_capDescription(CTE_PTR(mdb_node_get_mdbNext(prev_slot->cteMDBNode))));
         }
-    //}
-    //count_delete_cnode++;
 
-    // TODO: Possibly cteDelete before the traversal above, or at least check if this will be preempted/finaliseCapabiltiy return value is different 
+        // If found the source untyped cap, get its index in the memory thread's TCB's uppermost CNode
+        if (cap_get_capType(parent_slot->cap) == cap_untyped_cap) {
+            lookupCapAndSlot_ret_t lu_ret_cnode = lookupCapAndSlot(NODE_STATE(ksCurThread), MEMORY_THREAD_CNODE_CPTR);
+            // XXX: add return val verification, Is it a cnode?? Is this redundant if untyped capability is indeed found in the derivation tree (MDB traversal?)
+            // I think that in that case the calling thread should always be MemoryManager so this should always be a cnode
+            if (cap_get_capType(lu_ret_cnode.cap) == cap_cnode_cap) {
+                cte_t *cnode = CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret_cnode.cap));
+                word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret_cnode.cap);
+                // Find index of our target untyped in the CNode
+                word_t max_slot = (1<<radix) -1;
+                for (word_t slot = 0; slot <= max_slot; ++slot) {
+                    cte_t *query = &cnode[slot];
+                    if (cap_get_capType(query->cap) == cap_null_cap) {
+                        continue;
+                    }
+
+                    // XXX: sameregionas(query->cap, parent_slot->cap) returns true for overlapping untypeds!
+                    // XXX: for now, compare raw capabilities (they SHOULD be unique)
+                    if (query->cap.words[0] == parent_slot->cap.words[0] && query->cap.words[1] == parent_slot->cap.words[1]) {
+                        untypedSlabIndex = slot;
+                        break;
+                    }
+
+                }
+            }
+        }
+    }
+
+    // TODO: Possibly cteDelete before the traversal above, or at least check if this will be preempted/finaliseCapabiltiy return value is different
     // than EXCEPTION_NONE
     status = cteDelete(destSlot, true);
 
-    // Only change MRs if status is EXCEPTION_NONE (otherwise can mess things up with preemption, to lok into more)
-    if (status != EXCEPTION_NONE) {
-            return status;
-    } 
-    setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
-    setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
+    // Only change MRs if status is EXCEPTION_NONE (otherwise if call is preempted, input registers will be dirited)
+    if (status == EXCEPTION_NONE) {
+        setMR(NODE_STATE(ksCurThread), buffer, 0, untypedSlabIndex);
+        setMR(NODE_STATE(ksCurThread), buffer, 1, isLastReference);
+    }
     return status;
 }
 
@@ -1121,8 +1099,6 @@ static char* cap_get_capDescription(cte_t* cte)
 
 void debug_dumpCNode(cte_t* cnode, word_t radix)
 {
-    //printf("AHOU!\n");
-    //printf("cap: %u %u\n", cnode->cap.words[0], cnode->cap.words[1]);
 #define IN_CSPACE(SLOT) ((word_t)(SLOT) >= (word_t)cnode && (word_t)(SLOT) < (word_t)(&cnode[max_slot]))
 #define CSPACE_INDEX(SLOT) (((word_t)(SLOT) - (word_t)cnode) / sizeof(slot_t))
     word_t max_slot = (1<<radix) - 1;
@@ -1132,7 +1108,7 @@ void debug_dumpCNode(cte_t* cnode, word_t radix)
             continue;
         }
 
-        //printf("|- %03lx. decim: %lu %s -> ", slot, slot, cap_get_capDescription(query));
+        printf("|- %03lx. %s -> ", slot, cap_get_capDescription(query));
         for (query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode));
             query && isMDBParentOf(&cnode[slot], query);
             query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode))) {
